@@ -1,18 +1,22 @@
 <template>
-  <img alt="Vue logo" src="./assets/logo.png">
-  <HelloWorld msg="Welcome to Your Vue.js App"/>
+  <div id="app">
+    <GameMasterInterface />
+    <DraftingInterface />
+  </div>
 </template>
 
 <script>
-import HelloWorld from './components/HelloWorld.vue'
+import GameMasterInterface from './components/GameMasterInterface.vue'
+import DraftingInterface from './components/DraftingInterface.vue'
 
 export default {
-  name: 'App',
   components: {
-    HelloWorld
+    GameMasterInterface,
+    DraftingInterface
   }
 }
 </script>
+
 
 <style>
 #app {
