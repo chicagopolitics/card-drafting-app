@@ -1,30 +1,37 @@
 <template>
   <div id="app">
-    <GameMasterInterface />
-    <DraftingInterface />
+    <JoinOrCreateDraftSession v-if="!sessionJoined" @session-created="handleSessionCreated" @session-joined="handleSessionJoined" />
+    <DraftingInterface v-else :draftId="draftId" :playerName="playerName" />
   </div>
 </template>
 
 <script>
-import GameMasterInterface from './components/GameMasterInterface.vue'
-import DraftingInterface from './components/DraftingInterface.vue'
+import JoinOrCreateDraftSession from './components/JoinOrCreateDraftSession.vue';
+import DraftingInterface from './components/DraftingInterface.vue';
 
 export default {
+  data() {
+    return {
+      sessionJoined: false,
+      draftId: '',
+      playerName: ''
+    };
+  },
+  methods: {
+    handleSessionCreated(draftId, playerName) {
+      this.draftId = draftId;
+      this.playerName = playerName;
+      this.sessionJoined = true;
+    },
+    handleSessionJoined(draftId, playerName) {
+      this.draftId = draftId;
+      this.playerName = playerName;
+      this.sessionJoined = true;
+    }
+  },
   components: {
-    GameMasterInterface,
+    JoinOrCreateDraftSession,
     DraftingInterface
   }
-}
+};
 </script>
-
-
-<style>
-#app {
-  font-family: Avenir, Helvetica, Arial, sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  text-align: center;
-  color: #2c3e50;
-  margin-top: 60px;
-}
-</style>

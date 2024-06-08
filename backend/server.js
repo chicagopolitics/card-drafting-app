@@ -5,6 +5,7 @@ const cors = require('cors');
 const dotenv = require('dotenv');
 const OpenAIApi = require('openai');
 const Card = require('./models/Card'); // Import the Card model
+const DraftSession = require('./models/DraftSession'); // Import the DraftSession model
 
 dotenv.config(); // Load environment variables
 
@@ -54,9 +55,9 @@ function parseCardDetails(cards) {
     });
 }
 
-// Route to generate cards
-app.post('/generate-cards', async (req, res) => {
-  const { theme } = req.body;
+// Route to create a new draft session
+app.post('/create-session', async (req, res) => {
+  const { theme, players } = req.body;
 
   try {
     const response = await openai.chat.completions.create({
@@ -87,13 +88,88 @@ app.post('/generate-cards', async (req, res) => {
       card.artworkUrl = artResponse.data[0].url;
     }
 
-    // Save generated cards to the database
-    const cards = await Card.insertMany(generatedCards);
+    // Divide the cards into packs
+    const packs = [];
+    const packSize = 15;
+    for (let i = 0; i < generatedCards.length; i += packSize) {
+      packs.push(generatedCards.slice(i, i + packSize));
+    }
 
-    res.json(cards);
+    // Save the draft session to the database
+    const draftSession = new DraftSession({
+      theme,
+      packs,
+      players: players.map(name => ({ name })),
+      currentPackIndex: 0,
+      playerPicks: Array(players.length).fill([]),
+      currentPlayerIndex: 0
+    });
+
+    await draftSession.save();
+
+    res.json(draftSession);
   } catch (error) {
-    console.error('Error generating cards:', error.message);
-    res.status(500).send(`Error generating cards: ${error.message}`);
+    console.error('Error creating draft session:', error.message);
+    res.status(500).send(`Error creating draft session: ${error.message}`);
+  }
+});
+
+// Route to join a draft session
+app.post('/join-session', async (req, res) => {
+  const { draftId, playerName } = req.body;
+
+  try {
+    const draftSession = await DraftSession.findById(draftId);
+    draftSession.players.push({ name: playerName });
+    await draftSession.save();
+
+    res.json(draftSession);
+  } catch (error) {
+    console.error('Error joining draft session:', error.message);
+    res.status(500).send(`Error joining draft session: ${error.message}`);
+  }
+});
+
+// Route to pick a card
+app.post('/pick-card', async (req, res) => {
+  const { draftId, playerName, cardIndex } = req.body;
+
+  try {
+    const draftSession = await DraftSession.findById(draftId);
+    const currentPack = draftSession.packs[draftSession.currentPackIndex];
+
+    // Add picked card to player's collection
+    const pickedCard = currentPack.splice(cardIndex, 1)[0];
+    const playerIndex = draftSession.players.findIndex(player => player.name === playerName);
+    draftSession.playerPicks[playerIndex].push(pickedCard);
+
+    // Check if the pack is empty and move to the next pack
+    if (currentPack.length === 0) {
+      draftSession.currentPackIndex = (draftSession.currentPackIndex + 1) % draftSession.packs.length;
+      draftSession.currentPlayerIndex = (draftSession.currentPlayerIndex + 1) % draftSession.players.length;
+    } else {
+      draftSession.currentPlayerIndex = (draftSession.currentPlayerIndex + 1) % draftSession.players.length;
+    }
+
+    await draftSession.save();
+
+    res.json(draftSession);
+  } catch (error) {
+    console.error('Error picking card:', error.message);
+    res.status(500).send(`Error picking card: ${error.message}`);
+  }
+});
+
+// Add endpoint to fetch the draft session
+app.get('/draft-session/:draftId', async (req, res) => {
+  const { draftId } = req.params;
+
+  try {
+    const draftSession = await DraftSession.findById(draftId);
+    res.json(draftSession);
+  } catch (error) {
+    console.error('Error fetching draft session:', error.message);
+    res.status(500).send(`Error fetching draft session: ${error.message}`);
   }
 });
 
