@@ -1,4 +1,5 @@
 const express = require('express');
+const http = require('http');
 const mongoose = require('mongoose');
 const bodyParser = require('body-parser');
 const cors = require('cors');
@@ -6,14 +7,24 @@ const dotenv = require('dotenv');
 const OpenAIApi = require('openai');
 const Card = require('./models/Card'); // Import the Card model
 const DraftSession = require('./models/DraftSession'); // Import the DraftSession model
+const { Server } = require('socket.io');
 
 dotenv.config(); // Load environment variables
 
 const app = express();
+const server = http.createServer(app);
+const io = new Server(server, {
+  cors: {
+    origin: 'http://localhost:8080', // Allow requests from your Vue app
+    methods: ['GET', 'POST']
+  }
+});
 
 // Middleware
 app.use(bodyParser.json());
-app.use(cors());
+app.use(cors({
+  origin: 'http://localhost:8080' // Allow requests from your Vue app
+}));
 
 // Connect to MongoDB
 mongoose.connect('mongodb://localhost:27017/card-drafting-app', {
@@ -63,7 +74,7 @@ app.post('/create-session', async (req, res) => {
     const response = await openai.chat.completions.create({
       model: 'gpt-3.5-turbo',
       messages: [
-        {"role":"user", "content":`Generate 2 unique Magic the Gathering cards based on the theme: ${theme}. Include the following attributes for each card: Name, Cost, Type, Power/Toughness, Ability, FlavorText.`},
+        {"role":"user", "content":`Generate 5 unique Magic the Gathering cards based on the theme: ${theme}. Include the following attributes for each card: Name, Cost, Type, Power/Toughness, Ability, FlavorText.`},
         {"role":"system", "content":`Respond in a JSON format with a "cards" key containing an array of card objects, each having keys "Name", "Cost", "Type", "Power/Toughness", "Ability", and "FlavorText".`}
       ],
       max_tokens: 1000,
@@ -107,6 +118,8 @@ app.post('/create-session', async (req, res) => {
 
     await draftSession.save();
 
+    io.emit('sessionUpdated', draftSession); // Emit event for session update
+
     res.json(draftSession);
   } catch (error) {
     console.error('Error creating draft session:', error.message);
@@ -120,8 +133,22 @@ app.post('/join-session', async (req, res) => {
 
   try {
     const draftSession = await DraftSession.findById(draftId);
-    draftSession.players.push({ name: playerName });
+
+    if (!draftSession) {
+      throw new Error('Draft session not found');
+    }
+
+    // Add player to session if not already added
+    const playerExists = draftSession.players.some(player => player.name === playerName);
+
+    if (!playerExists) {
+      draftSession.players.push({ name: playerName });
+      draftSession.playerPicks.push([]); // Initialize the player's picks array
+    }
+
     await draftSession.save();
+
+    io.emit('sessionUpdated', draftSession); // Emit event for session update
 
     res.json(draftSession);
   } catch (error) {
@@ -136,11 +163,34 @@ app.post('/pick-card', async (req, res) => {
 
   try {
     const draftSession = await DraftSession.findById(draftId);
+
+    if (!draftSession) {
+      throw new Error('Draft session not found');
+    }
+
     const currentPack = draftSession.packs[draftSession.currentPackIndex];
+
+    if (!currentPack) {
+      throw new Error('Current pack not found');
+    }
 
     // Add picked card to player's collection
     const pickedCard = currentPack.splice(cardIndex, 1)[0];
+
+    if (!pickedCard) {
+      throw new Error('Picked card not found');
+    }
+
     const playerIndex = draftSession.players.findIndex(player => player.name === playerName);
+
+    if (playerIndex === -1) {
+      throw new Error('Player not found in draft session');
+    }
+
+    if (!draftSession.playerPicks[playerIndex]) {
+      draftSession.playerPicks[playerIndex] = []; // Initialize if undefined
+    }
+
     draftSession.playerPicks[playerIndex].push(pickedCard);
 
     // Check if the pack is empty and move to the next pack
@@ -153,12 +203,15 @@ app.post('/pick-card', async (req, res) => {
 
     await draftSession.save();
 
+    io.emit('sessionUpdated', draftSession); // Emit event for session update
+
     res.json(draftSession);
   } catch (error) {
     console.error('Error picking card:', error.message);
     res.status(500).send(`Error picking card: ${error.message}`);
   }
 });
+
 
 // Add endpoint to fetch the draft session
 app.get('/draft-session/:draftId', async (req, res) => {
@@ -175,6 +228,6 @@ app.get('/draft-session/:draftId', async (req, res) => {
 
 // Start the server
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
+server.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });
