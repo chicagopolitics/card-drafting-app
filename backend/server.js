@@ -87,6 +87,7 @@ app.post('/create-session', async (req, res) => {
     const cardsJson = JSON.parse(response.choices[0].message.content);
     const generatedCards = parseCardDetails(cardsJson.cards);
 
+    /*
     // Generate artwork for each card using DALL-E
     for (let card of generatedCards) {
       const artResponse = await openai.images.generate({
@@ -98,6 +99,7 @@ app.post('/create-session', async (req, res) => {
       console.log('Art Response:', artResponse);
       card.artworkUrl = artResponse.data[0].url;
     }
+*/
 
     // Divide the cards into packs
     const packs = [];
