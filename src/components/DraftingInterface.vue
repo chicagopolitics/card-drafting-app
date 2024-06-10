@@ -9,20 +9,22 @@
         <p><strong>Current Turn:</strong> {{ currentPlayerName }}</p>
       </div>
       <h2>Current Pack</h2>
-      <div v-if="currentPack.length">
-        <div v-for="(card, index) in currentPack" :key="index" class="card">
-          <h3>{{ card.name }}</h3>
-          <p>Cost: {{ card.cost }}</p>
-          <p>Type: {{ card.type }}</p>
-          <p>Power/Toughness: {{ card.powerToughness }}</p>
-          <p>Ability: {{ card.ability }}</p>
-          <p>Flavor Text: {{ card.flavorText }}</p>
-          <img :src="card.artworkUrl" alt="Artwork" />
-          <button @click="pickCard(index)" :disabled="isNotCurrentPlayer">Pick Card</button>
+      <div v-if="isCurrentPlayer">
+        <div v-if="currentPack.length">
+          <CardComponent
+            v-for="(card, index) in currentPack"
+            :key="index"
+            :card="card"
+            :disabled="!isCurrentPlayer"
+            :onPick="() => pickCard(index)"
+          />
+        </div>
+        <div v-else>
+          <p>All cards have been picked from this pack.</p>
         </div>
       </div>
       <div v-else>
-        <p>All cards have been picked from this pack.</p>
+        <p>Waiting for your turn...</p>
       </div>
       <SelectedCards :selectedCards="selectedCards" />
     </div>
@@ -36,6 +38,7 @@
 import axios from 'axios';
 import { io } from 'socket.io-client';
 import SelectedCards from './SelectedCards.vue';
+import CardComponent from './CardComponent.vue';
 
 export default {
   props: {
@@ -61,11 +64,11 @@ export default {
       }
       return [];
     },
-    isNotCurrentPlayer() {
+    isCurrentPlayer() {
       if (this.draftSession) {
-        return this.draftSession.players[this.draftSession.currentPlayerIndex].name !== this.playerName;
+        return this.draftSession.players[this.draftSession.currentPlayerIndex].name === this.playerName;
       }
-      return true;
+      return false;
     },
     selectedCards() {
       if (this.draftSession) {
@@ -122,7 +125,8 @@ export default {
     this.initializeSocket();
   },
   components: {
-    SelectedCards
+    SelectedCards,
+    CardComponent
   }
 };
 </script>
