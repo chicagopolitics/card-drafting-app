@@ -8,7 +8,7 @@ const OpenAIApi = require('openai');
 const Card = require('./models/Card'); // Import the Card model
 const DraftSession = require('./models/DraftSession'); // Import the DraftSession model
 const { Server } = require('socket.io');
-
+const artistList = ["Svetlin Velinov", "Daarken", "Eric Deschamps", "Adam Paquette", "Igor Kieryluk", "Victor Adame Minguez", "Matt Stewart", "Dan Scott", "Titus Lunter", "Chris Rahn", "Jason A. Engle", "Johann Bodin", "Noah Bradley", "Randy Vargas", "Jesper Ejsing", "Ryan Pancoast", "Izzy", "Tomasz Jedruszek", "Jason Rainville", "Volkan Baga", "Kieran Yanner", "Tyler Jacobson", "Grzegorz Rutkowski", "Jason Chan", "Zack Stella", "Magali Villeneuve", "Andrew Mar", "Campbell White", "Chase Stone", "Lie Setiawan", "Slawomir Maniak", "Alayna Danner", "Lucas Graciano", "Aaron Miller", "Chris Rallis", "Games Workshop", "James Ryman", "Raymond Swanland", "Cristi Balanescu", "Jason Felix"]
 dotenv.config(); // Load environment variables
 
 const app = express();
@@ -48,6 +48,10 @@ app.get('/', (req, res) => {
   res.send('Hello World');
 });
 
+function getRandomArtist() {
+  return artistList[Math.floor(Math.random() * artistList.length)];
+}
+
 // Helper function to parse card details from JSON object
 function parseCardDetails(cards) {
     return cards.map(card => {
@@ -66,15 +70,32 @@ function parseCardDetails(cards) {
     });
 }
 
+// Function to clean JSON response
+function cleanJsonResponse(response) {
+  const jsonMarkerStart = "```json\n";
+  const jsonMarkerEnd = "\n```";
+
+  // Trim leading and trailing whitespace/newlines
+  response = response.trim();
+
+  if (response.startsWith(jsonMarkerStart) && response.endsWith(jsonMarkerEnd)) {
+    console.log('trimming json')
+    // Remove the markers
+    response = response.substring(jsonMarkerStart.length, response.length - jsonMarkerEnd.length);
+  }
+
+  return response;
+}
+
 // Route to create a new draft session
 app.post('/create-session', async (req, res) => {
   const { theme, players } = req.body;
 
   try {
     const response = await openai.chat.completions.create({
-      model: 'gpt-3.5-turbo',
+      model: 'gpt-4o',
       messages: [
-        {"role":"user", "content":`Generate 25 unique Magic the Gathering cards based on the theme: ${theme}. Include the following attributes for each card: Name, Cost, Type, Power/Toughness, Ability, FlavorText.`},
+        {"role":"user", "content":`Generate 5 unique Magic the Gathering cards based on the theme: ${theme}. Include the following attributes for each card: Name, Cost, Type, Power/Toughness, Ability, FlavorText.`},
         {"role":"system", "content":`Respond in a JSON format with a "cards" key containing an array of card objects, each having keys "Name", "Cost", "Type", "Power/Toughness", "Ability", and "FlavorText".`}
       ],
       max_tokens: 3000,
@@ -83,23 +104,23 @@ app.post('/create-session', async (req, res) => {
     // Log the full response object
     console.log('Full response:', JSON.stringify(response, null, 2));
 
-    // Extract the card data from the response
-    const cardsJson = JSON.parse(response.choices[0].message.content);
+    // Clean and extract the card data from the response
+    const cleanedContent = cleanJsonResponse(response.choices[0].message.content);
+    const cardsJson = JSON.parse(cleanedContent);
     const generatedCards = parseCardDetails(cardsJson.cards);
 
-    /*
     // Generate artwork for each card using DALL-E
     for (let card of generatedCards) {
+      const artist = getRandomArtist();
       const artResponse = await openai.images.generate({
-        model: "dall-e-2",
-        prompt: `Artwork for a Magic the Gathering card with the following attributes: ${card.type}, ${card.ability}, ${card.flavorText}`,
+        model: "dall-e-3",
+        prompt: `An illustration in the style of ${artist} with the following attributes: ${card.Name}, ${card.type}, ${card.ability}, ${card.flavorText}. Only the artwork, no card frame or text.`,
         n: 1,
-        size: '256x256',
+        size: '1024x1024',
       });
       console.log('Art Response:', artResponse);
       card.artworkUrl = artResponse.data[0].url;
     }
-*/
 
     // Divide the cards into packs
     const packs = [];
@@ -128,6 +149,7 @@ app.post('/create-session', async (req, res) => {
     res.status(500).send(`Error creating draft session: ${error.message}`);
   }
 });
+
 
 // Route to join a draft session
 app.post('/join-session', async (req, res) => {

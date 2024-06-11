@@ -1,8 +1,10 @@
 <template>
-  <div id="app">
-    <JoinOrCreateDraftSession v-if="!sessionJoined" @session-created="handleSessionCreated" @session-joined="handleSessionJoined" />
-    <DraftingInterface v-else :draftId="draftId" :playerName="playerName" />
-  </div>
+  <v-app>
+    <div id="app">
+      <JoinOrCreateDraftSession v-if="!sessionJoined" @session-created="handleSessionCreated" @session-joined="handleSessionJoined" />
+      <DraftingInterface v-else :draftId="draftId" :playerName="playerName" />
+    </div>
+  </v-app>
 </template>
 
 <script>
@@ -35,3 +37,7 @@ export default {
   }
 };
 </script>
+
+<style>
+@import 'vuetify/styles';
+</style>

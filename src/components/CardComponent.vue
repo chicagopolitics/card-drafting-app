@@ -1,14 +1,18 @@
 <template>
-    <div class="card">
-      <h3>{{ card.name }}</h3>
-      <p>Cost: {{ card.cost }}</p>
-      <p>Type: {{ card.type }}</p>
-      <p>Power/Toughness: {{ card.powerToughness }}</p>
-      <p>Ability: {{ card.ability }}</p>
-      <p>Flavor Text: {{ card.flavorText }}</p>
-      <img :src="card.artworkUrl" alt="Artwork" />
-      <button @click="pickCard" :disabled="disabled">Pick Card</button>
-    </div>
+    <v-card class="mx-auto my-4" max-width="400">
+      <v-img :src="card.artworkUrl" aspect-ratio="1.7" alt="Artwork"></v-img>
+      <v-card-title>{{ card.name }}</v-card-title>
+      <v-card-subtitle>{{ card.type }}</v-card-subtitle>
+      <v-card-text>
+        <div>Cost: {{ card.cost }}</div>
+        <div>Power/Toughness: {{ card.powerToughness }}</div>
+        <div>Ability: {{ card.ability }}</div>
+        <div>Flavor Text: {{ card.flavorText }}</div>
+      </v-card-text>
+      <v-card-actions>
+        <v-btn @click="pickCard" :disabled="disabled" color="primary">Pick Card</v-btn>
+      </v-card-actions>
+    </v-card>
   </template>
   
   <script>
@@ -36,10 +40,8 @@
   </script>
   
   <style scoped>
-  .card {
-    border: 1px solid #ccc;
-    padding: 10px;
-    margin-bottom: 10px;
+  .v-card {
+    margin: 10px;
   }
   </style>
   

@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <v-container>
     <h1>Drafting Interface</h1>
     <div v-if="draftSession">
       <div>
@@ -11,13 +11,22 @@
       <h2>Current Pack</h2>
       <div v-if="isCurrentPlayer">
         <div v-if="currentPack.length">
-          <CardComponent
-            v-for="(card, index) in currentPack"
-            :key="index"
-            :card="card"
-            :disabled="!isCurrentPlayer"
-            :onPick="() => pickCard(index)"
-          />
+          <v-row>
+            <v-col
+              v-for="(card, index) in currentPack"
+              :key="index"
+              cols="12"
+              sm="6"
+              md="4"
+              lg="3"
+            >
+              <CardComponent
+                :card="card"
+                :disabled="!isCurrentPlayer"
+                :onPick="() => pickCard(index)"
+              />
+            </v-col>
+          </v-row>
         </div>
         <div v-else>
           <p>All cards have been picked from this pack.</p>
@@ -31,7 +40,7 @@
     <div v-else>
       <p>Draft session not found. Please start a draft session.</p>
     </div>
-  </div>
+  </v-container>
 </template>
 
 <script>
@@ -132,9 +141,7 @@ export default {
 </script>
 
 <style scoped>
-.card {
-  border: 1px solid #ccc;
-  padding: 10px;
-  margin-bottom: 10px;
+.v-card {
+  margin: 10px;
 }
 </style>
