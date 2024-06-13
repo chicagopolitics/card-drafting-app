@@ -250,6 +250,36 @@ app.get('/draft-session/:draftId', async (req, res) => {
   }
 });
 
+// Route to save the deck
+app.post('/save-deck', async (req, res) => {
+  const { draftId, playerName, deck } = req.body;
+
+  try {
+    const draftSession = await DraftSession.findById(draftId);
+
+    if (!draftSession) {
+      throw new Error('Draft session not found');
+    }
+
+    const playerIndex = draftSession.players.findIndex(player => player.name === playerName);
+
+    if (playerIndex === -1) {
+      throw new Error('Player not found in draft session');
+    }
+
+    draftSession.playerPicks[playerIndex] = deck;
+
+    await draftSession.save();
+
+    io.emit('sessionUpdated', draftSession); // Emit event for session update
+
+    res.json(draftSession);
+  } catch (error) {
+    console.error('Error saving deck:', error.message);
+    res.status(500).send(`Error saving deck: ${error.message}`);
+  }
+});
+
 // Start the server
 const PORT = process.env.PORT || 5000;
 server.listen(PORT, () => {
