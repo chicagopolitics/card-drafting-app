@@ -5,7 +5,7 @@
     <v-card-subtitle>{{ card.type }}</v-card-subtitle>
     <v-card-text>
       <CardCost :cost="card.cost" />
-      <div>Ability: {{ card.ability }}</div>
+      <div>{{ card.ability }}</div>
       <div><i>{{ card.flavorText }}</i></div>
       <div class="power-toughness">{{ card.powerToughness }}</div>
     </v-card-text>
